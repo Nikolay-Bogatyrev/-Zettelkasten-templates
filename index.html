@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zettelkasten Карточки - Генератор</title>
+<style>
+/* Настройки для печати */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  body {
+    margin: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .page {
+    page-break-after: always;
+  }
+  .page:last-child {
+    page-break-after: auto;
+  }
+}
+
+/* Основные стили */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Arial', sans-serif;
+  background: #f0f0f0;
+}
+
+/* Инструкция (не печатается) */
+.instructions {
+  padding: 20px;
+  background: #fff;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.instructions h2 {
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.instructions ul {
+  margin-left: 20px;
+  color: #666;
+}
+
+.instructions li {
+  margin-bottom: 5px;
+}
+
+/* Страница A4 */
+.page {
+  width: 210mm;
+  height: 297mm;
+  background: white;
+  margin: 0 auto 20px;
+  padding: 5mm;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+/* Сетка карточек 2x4 */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(4, 1fr);
+  gap: 0;
+  width: 200mm;
+  height: 287mm;
+}
+
+/* Индивидуальная карточка */
+.card {
+  width: 100mm;
+  height: 71.75mm;
+  border: 1px dashed #999;
+  padding: 5mm;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Заголовок карточки */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 2mm;
+  border-bottom: 2px solid #333;
+  margin-bottom: 3mm;
+  min-height: 8mm;
+}
+
+.card-id {
+  font-size: 9pt;
+  color: #666;
+  font-family: 'Courier New', monospace;
+}
+
+.card-id input {
+  border: none;
+  border-bottom: 1px dotted #999;
+  width: 80px;
+  font-family: 'Courier New', monospace;
+  font-size: 9pt;
+}
+
+.card-categories {
+  font-size: 8pt;
+  color: #666;
+}
+
+.card-categories label {
+  margin-left: 5px;
+}
+
+/* Заголовок заметки */
+.card-title {
+  min-height: 8mm;
+  margin-bottom: 3mm;
+  padding-bottom: 2mm;
+  border-bottom: 1px solid #ddd;
+}
+
+.card-title-line {
+  border: none;
+  border-bottom: 1px dotted #999;
+  width: 100%;
+  font-size: 11pt;
+  font-weight: bold;
+  padding: 1mm 0;
+}
+
+/* Тело карточки */
+.card-body {
+  flex: 1;
+  position: relative;
+  min-height: 35mm;
+}
+
+.card-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.line {
+  border-bottom: 1px dotted #e0e0e0;
+  height: 5mm;
+  width: 100%;
+}
+
+/* Футер карточки */
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 2mm;
+  margin-top: 2mm;
+  border-top: 1px solid #ddd;
+  font-size: 8pt;
+  color: #666;
+  min-height: 6mm;
+}
+
+.links-section {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+}
+
+.link-box {
+  display: inline-block;
+  width: 15mm;
+  height: 4mm;
+  border: 1px dotted #999;
+  vertical-align: middle;
+}
+
+.source-section {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+}
+
+.source-line {
+  display: inline-block;
+  width: 20mm;
+  border-bottom: 1px dotted #999;
+}
+
+/* Категории для разных типов карточек */
+.category-tech {
+  background: linear-gradient(to right, #e3f2fd 0%, #e3f2fd 3mm, white 3mm);
+}
+
+.category-biz {
+  background: linear-gradient(to right, #fff3e0 0%, #fff3e0 3mm, white 3mm);
+}
+
+.category-art {
+  background: linear-gradient(to right, #f3e5f5 0%, #f3e5f5 3mm, white 3mm);
+}
+
+.category-lit {
+  background: linear-gradient(to right, #e8f5e9 0%, #e8f5e9 3mm, white 3mm);
+}
+
+.category-personal {
+  background: linear-gradient(to right, #fce4ec 0%, #fce4ec 3mm, white 3mm);
+}
+
+/* Кнопка печати */
+.print-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  font-size: 16pt;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  z-index: 1000;
+}
+
+.print-button:hover {
+  background: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0,0,0,0.3);
+}
+
+/* Панель управления */
+.control-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  z-index: 1000;
+}
+
+.control-btn {
+  padding: 8px 15px;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all 0.3s;
+}
+
+.control-btn:hover {
+  transform: translateX(5px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Модальное окно */
+.files-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  z-index: 2000;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.close-modal {
+  float: right;
+  font-size: 24px;
+  cursor: pointer;
+  margin-top: -10px;
+}
+
+/* Статус сообщения */
+#status-message {
+  margin-top: 10px;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  display: none;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Загрузчик */
+.loader {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #4CAF50;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body>
+
+<!-- Инструкции (не печатаются) -->
+<div class="instructions no-print" id="instructions">
+  <h2>📚 Шаблон карточек Zettelkasten для Николая</h2>
+  <p><strong>Инструкция по использованию:</strong></p>
+  <ul>
+    <li>Используйте панель управления справа для работы с карточками</li>
+    <li><strong>Печать:</strong> Нажмите кнопку "Печать" или Ctrl+P (Cmd+P на Mac)</li>
+    <li><strong>PDF в Drive:</strong> Создает PDF файл прямо в вашем Google Drive</li>
+    <li><strong>Сохранить HTML:</strong> Сохраняет текущий шаблон как HTML файл</li>
+    <li>После печати разрежьте по пунктирным линиям</li>
+  </ul>
+  
+  <p><strong>Цветовые коды (полоса слева):</strong></p>
+  <ul>
+    <li>🔵 Голубая - Техническая разработка (Frontend/Backend/Архитектура)</li>
+    <li>🟠 Оранжевая - Бизнес/Gambling/Product Management</li>
+    <li>🟣 Фиолетовая - Искусство</li>
+    <li>🟢 Зеленая - Литература</li>
+    <li>🔴 Розовая - Личное развитие/Идеи</li>
+  </ul>
+</div>
+
+<!-- Панель управления (не печатается) -->
+<div class="control-panel no-print" id="controlPanel">
+  <h3 style="margin: 0 0 10px 0; font-size: 16px;">Панель управления</h3>
+  <div class="control-buttons" style="display: flex; flex-direction: column; gap: 10px;">
+    <button onclick="generatePDF()" class="control-btn" style="background: #4CAF50;">
+      📄 Создать PDF в Drive
+    </button>
+    
+    <button onclick="saveAsHTML()" class="control-btn" style="background: #2196F3;">
+      💾 Сохранить HTML
+    </button>
+    
+    <button onclick="showSavedFiles()" class="control-btn" style="background: #FF9800;">
+      📁 Мои файлы
+    </button>
+    
+    <button onclick="toggleInstructions()" class="control-btn" style="background: #9C27B0;">
+      ℹ️ Инструкции
+    </button>
+    
+    <button onclick="getStatistics()" class="control-btn" style="background: #607D8B;">
+      📊 Статистика
+    </button>
+    
+    <button onclick="window.print()" class="control-btn" style="background: #795548;">
+      🖨️ Печать
+    </button>
+  </div>
+  
+  <div id="status-message"></div>
+</div>
+
+<!-- Страница 1: Технические карточки -->
+<div class="page">
+  <div class="grid">
+    <!-- Карточка 1 -->
+    <div class="card category-tech">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Frontend</label>
+          <label>□ Backend</label>
+          <label>□ Arch</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Карточки 2-8 (Технические) -->
+    <div class="card category-tech">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Frontend</label>
+          <label>□ Backend</label>
+          <label>□ Arch</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-tech">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Frontend</label>
+          <label>□ Backend</label>
+          <label>□ Arch</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-tech">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Frontend</label>
+          <label>□ Backend</label>
+          <label>□ Arch</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-tech">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Frontend</label>
+          <label>□ Backend</label>
+          <label>□ Arch</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-tech">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Frontend</label>
+          <label>□ Backend</label>
+          <label>□ Arch</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-tech">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Frontend</label>
+          <label>□ Backend</label>
+          <label>□ Arch</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-tech">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Frontend</label>
+          <label>□ Backend</label>
+          <label>□ Arch</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Страница 2: Бизнес/Gambling карточки -->
+<div class="page">
+  <div class="grid">
+    <!-- 8 карточек для Бизнес/Gambling -->
+    <div class="card category-biz">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Mexico</label>
+          <label>□ Product</label>
+          <label>□ UX</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-biz">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Mexico</label>
+          <label>□ Product</label>
+          <label>□ UX</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-biz">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Mexico</label>
+          <label>□ Product</label>
+          <label>□ UX</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-biz">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Mexico</label>
+          <label>□ Product</label>
+          <label>□ UX</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-biz">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Mexico</label>
+          <label>□ Product</label>
+          <label>□ UX</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-biz">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Mexico</label>
+          <label>□ Product</label>
+          <label>□ UX</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-biz">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Mexico</label>
+          <label>□ Product</label>
+          <label>□ UX</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-biz">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Mexico</label>
+          <label>□ Product</label>
+          <label>□ UX</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Страница 3: Искусство и Литература -->
+<div class="page">
+  <div class="grid">
+    <!-- 4 карточки для Искусства -->
+    <div class="card category-art">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Живопись</label>
+          <label>□ Теория</label>
+          <label>□ История</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-art">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Живопись</label>
+          <label>□ Теория</label>
+          <label>□ История</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-art">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Живопись</label>
+          <label>□ Теория</label>
+          <label>□ История</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-art">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Живопись</label>
+          <label>□ Теория</label>
+          <label>□ История</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 карточки для Литературы -->
+    <div class="card category-lit">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Классика</label>
+          <label>□ Современ</label>
+          <label>□ Теория</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-lit">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Классика</label>
+          <label>□ Современ</label>
+          <label>□ Теория</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-lit">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Классика</label>
+          <label>□ Современ</label>
+          <label>□ Теория</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-lit">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Классика</label>
+          <label>□ Современ</label>
+          <label>□ Теория</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Страница 4: Личное развитие и универсальные -->
+<div class="page">
+  <div class="grid">
+    <!-- 8 универсальных карточек -->
+    <div class="card category-personal">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Идея</label>
+          <label>□ Синтез</label>
+          <label>□ Проект</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card category-personal">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ Идея</label>
+          <label>□ Синтез</label>
+          <label>□ Проект</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ ____</label>
+          <label>□ ____</label>
+          <label>□ ____</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ ____</label>
+          <label>□ ____</label>
+          <label>□ ____</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ ____</label>
+          <label>□ ____</label>
+          <label>□ ____</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ ____</label>
+          <label>□ ____</label>
+          <label>□ ____</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ ____</label>
+          <label>□ ____</label>
+          <label>□ ____</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-id">ID: <input type="text" placeholder="2026.___" /></div>
+        <div class="card-categories">
+          <label>□ ____</label>
+          <label>□ ____</label>
+          <label>□ ____</label>
+        </div>
+      </div>
+      <div class="card-title">
+        <input type="text" class="card-title-line" placeholder="Тема заметки..." />
+      </div>
+      <div class="card-body">
+        <div class="card-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="links-section">
+          <span>→</span>
+          <span class="link-box"></span>
+          <span class="link-box"></span>
+        </div>
+        <div class="source-section">
+          <span>Источник:</span>
+          <span class="source-line"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript для Google Apps Script -->
+<script>
+// ============= ИНИЦИАЛИЗАЦИЯ =============
+
+// Проверяем, работаем ли мы в Google Apps Script
+const isGoogleAppsScript = typeof google !== 'undefined' && google.script && google.script.run;
+
+// Глобальные переменные
+let currentSettings = null;
+let isGenerating = false;
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+  initializeApp();
+});
+
+/**
+ * Инициализация приложения
+ */
+function initializeApp() {
+  // Если мы в GAS, загружаем настройки
+  if (isGoogleAppsScript) {
+    loadSettings();
+  }
+  
+  // Настройка обработчиков для печати
+  setupPrintHandlers();
+  
+  // Проверяем режим печати из URL
+  checkPrintMode();
+}
+
+/**
+ * Загружает настройки пользователя (только для GAS)
+ */
+function loadSettings() {
+  if (!isGoogleAppsScript) return;
+  
+  google.script.run
+    .withSuccessHandler(function(settings) {
+      currentSettings = settings;
+      console.log('Настройки загружены');
+    })
+    .withFailureHandler(function(error) {
+      console.error('Ошибка загрузки настроек:', error);
+    })
+    .getUserSettings();
+}
+
+/**
+ * Генерирует PDF через Google Apps Script
+ */
+function generatePDF() {
+  if (!isGoogleAppsScript) {
+    alert('Эта функция доступна только в Google Apps Script');
+    return;
+  }
+  
+  if (isGenerating) {
+    showStatus('Уже идет генерация...', 'warning');
+    return;
+  }
+  
+  isGenerating = true;
+  showStatus('Генерация PDF...', 'info');
+  
+  // Получаем HTML содержимое
+  const htmlContent = document.documentElement.outerHTML;
+  
+  // Отправляем на сервер
+  google.script.run
+    .withSuccessHandler(function(result) {
+      isGenerating = false;
+      if (result.success) {
+        showStatus(`✅ PDF создан: ${result.fileName}`, 'success');
+        // Открываем файл в новой вкладке
+        if (result.viewUrl) {
+          window.open(result.viewUrl, '_blank');
+        }
+      } else {
+        showStatus('❌ Ошибка: ' + result.error, 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      isGenerating = false;
+      showStatus('❌ Ошибка: ' + error, 'error');
+    })
+    .generatePDF(htmlContent);
+}
+
+/**
+ * Сохраняет как HTML файл
+ */
+function saveAsHTML() {
+  if (!isGoogleAppsScript) {
+    // Если не в GAS, используем обычное скачивание
+    const htmlContent = document.documentElement.outerHTML;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'zettelkasten_cards.html';
+    a.click();
+    URL.revokeObjectURL(url);
+    showStatus('✅ HTML файл скачан', 'success');
+    return;
+  }
+  
+  showStatus('Сохранение HTML...', 'info');
+  
+  const htmlContent = document.documentElement.outerHTML;
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showStatus(`✅ HTML сохранен: ${result.fileName}`, 'success');
+      } else {
+        showStatus('❌ Ошибка: ' + result.error, 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showStatus('❌ Ошибка: ' + error, 'error');
+    })
+    .saveHTMLFile(htmlContent);
+}
+
+/**
+ * Показывает сохраненные файлы
+ */
+function showSavedFiles() {
+  if (!isGoogleAppsScript) {
+    alert('Эта функция доступна только в Google Apps Script');
+    return;
+  }
+  
+  showStatus('Загрузка файлов...', 'info');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        displayFilesList(result.files);
+        showStatus(`Найдено файлов: ${result.files.length}`, 'success');
+      } else {
+        showStatus('❌ Ошибка: ' + result.error, 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showStatus('❌ Ошибка: ' + error, 'error');
+    })
+    .getSavedFiles();
+}
+
+/**
+ * Отображает список файлов
+ */
+function displayFilesList(files) {
+  // Удаляем существующее модальное окно, если есть
+  const existingModal = document.querySelector('.files-modal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+  
+  // Создаем модальное окно
+  const modal = document.createElement('div');
+  modal.className = 'files-modal no-print';
+  
+  let filesHTML = '<h2>Сохраненные файлы <span class="close-modal" onclick="this.parentElement.parentElement.remove()">✖️</span></h2>';
+  
+  if (files.length === 0) {
+    filesHTML += '<p>Нет сохраненных файлов</p>';
+  } else {
+    filesHTML += '<div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">';
+    files.forEach(file => {
+      const icon = file.type.includes('pdf') ? '📄' : 
+                   file.type.includes('html') ? '🌐' : '📋';
+      const size = formatFileSize(file.size);
+      const date = new Date(file.created).toLocaleDateString('ru-RU');
+      
+      filesHTML += `
+        <div style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>${icon} ${file.name}</strong>
+              <br>
+              <small style="color: #666;">${size} • ${date}</small>
+            </div>
+            <div style="display: flex; gap: 5px;">
+              <button onclick="window.open('${file.url}', '_blank')" style="
+                padding: 5px 10px;
+                background: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+              ">Открыть</button>
+              <button onclick="deleteFile('${file.id}')" style="
+                padding: 5px 10px;
+                background: #f44336;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+              ">Удалить</button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    filesHTML += '</div>';
+  }
+  
+  modal.innerHTML = filesHTML;
+  document.body.appendChild(modal);
+}
+
+/**
+ * Удаляет файл
+ */
+function deleteFile(fileId) {
+  if (!isGoogleAppsScript) return;
+  
+  if (!confirm('Удалить этот файл?')) return;
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showStatus('✅ Файл удален', 'success');
+        // Закрываем модальное окно и обновляем список
+        document.querySelector('.files-modal').remove();
+        showSavedFiles();
+      } else {
+        showStatus('❌ Ошибка: ' + result.error, 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      showStatus('❌ Ошибка: ' + error, 'error');
+    })
+    .deleteFile(fileId);
+}
+
+/**
+ * Переключает видимость инструкций
+ */
+function toggleInstructions() {
+  const instructions = document.getElementById('instructions');
+  if (instructions) {
+    instructions.style.display = instructions.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+/**
+ * Получает статистику
+ */
+function getStatistics() {
+  if (!isGoogleAppsScript) {
+    alert('Эта функция доступна только в Google Apps Script');
+    return;
+  }
+  
+  showStatus('Загрузка статистики...', 'info');
+  
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        const stats = result.stats;
+        alert(`📊 Статистика использования:\n\n` +
+              `Всего файлов: ${stats.totalFiles}\n` +
+              `PDF файлов: ${stats.pdfFiles}\n` +
+              `HTML файлов: ${stats.htmlFiles}\n` +
+              `JSON файлов: ${stats.jsonFiles}\n` +
+              `Общий размер: ${stats.totalSizeFormatted}\n` +
+              `Последнее создание: ${stats.lastCreatedFormatted}`);
+      }
+    })
+    .withFailureHandler(function(error) {
+      showStatus('❌ Ошибка: ' + error, 'error');
+    })
+    .getUsageStats();
+}
+
+/**
+ * Показывает статус-сообщение
+ */
+function showStatus(message, type = 'info') {
+  const statusEl = document.getElementById('status-message');
+  if (statusEl) {
+    statusEl.textContent = message;
+    statusEl.style.display = 'block';
+    
+    // Цвета для разных типов
+    const colors = {
+      info: '#2196F3',
+      success: '#4CAF50',
+      warning: '#FF9800',
+      error: '#f44336'
+    };
+    
+    statusEl.style.background = colors[type] + '20';
+    statusEl.style.border = `1px solid ${colors[type]}`;
+    statusEl.style.color = colors[type];
+    
+    // Автоскрытие через 5 секунд
+    setTimeout(() => {
+      statusEl.style.display = 'none';
+    }, 5000);
+  }
+}
+
+/**
+ * Форматирует размер файла
+ */
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+/**
+ * Настройки для печати
+ */
+function setupPrintHandlers() {
+  window.addEventListener('beforeprint', function() {
+    // Очищаем input поля для чистой печати
+    const inputs = document.querySelectorAll('input[type="text"]');
+    window.savedInputValues = [];
+    inputs.forEach((input, index) => {
+      window.savedInputValues[index] = input.value;
+      if (!input.value) {
+        input.style.border = 'none';
+        input.style.borderBottom = '1px dotted #999';
+      }
+    });
+    
+    // Скрываем элементы no-print
+    const noPrintElements = document.querySelectorAll('.no-print');
+    noPrintElements.forEach(el => {
+      el.style.display = 'none';
+    });
+  });
+  
+  window.addEventListener('afterprint', function() {
+    // Восстанавливаем значения
+    const inputs = document.querySelectorAll('input[type="text"]');
+    inputs.forEach((input, index) => {
+      if (window.savedInputValues && window.savedInputValues[index]) {
+        input.value = window.savedInputValues[index];
+      }
+    });
+    
+    // Восстанавливаем элементы no-print
+    const noPrintElements = document.querySelectorAll('.no-print');
+    noPrintElements.forEach(el => {
+      el.style.display = '';
+    });
+  });
+}
+
+/**
+ * Проверяет режим печати из URL
+ */
+function checkPrintMode() {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('action') === 'print') {
+    setTimeout(() => {
+      window.print();
+    }, 1000);
+  }
+}
+
+// Делаем функции доступными глобально
+window.generatePDF = generatePDF;
+window.saveAsHTML = saveAsHTML;
+window.showSavedFiles = showSavedFiles;
+window.toggleInstructions = toggleInstructions;
+window.deleteFile = deleteFile;
+window.getStatistics = getStatistics;
+</script>
+
+</body>
+</html>

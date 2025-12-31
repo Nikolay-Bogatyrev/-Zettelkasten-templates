@@ -274,6 +274,155 @@ body {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* Панель выбора типов карточек */
+.card-type-selector {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ddd;
+}
+
+.card-type-selector h4 {
+  font-size: 14px;
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.card-type-checkbox {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.card-type-checkbox input[type="checkbox"] {
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+.card-type-checkbox label {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.color-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  margin-right: 8px;
+  border: 1px solid #ccc;
+}
+
+.page.hidden {
+  display: none !important;
+}
+
+/* Модальное окно для добавления типа */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+}
+
+.modal-content {
+  background: white;
+  padding: 25px;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-modal-btn:hover {
+  color: #000;
+}
+
+.modal-form-group {
+  margin-bottom: 15px;
+}
+
+.modal-form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.modal-form-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  flex: 1;
+}
+
+.modal-btn-primary {
+  background: #4CAF50;
+  color: white;
+}
+
+.modal-btn-primary:hover {
+  background: #45a049;
+}
+
+.modal-btn-secondary {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.modal-btn-secondary:hover {
+  background: #e0e0e0;
+}
 </style>
 </head>
 <body>
@@ -283,7 +432,9 @@ body {
   <h2>📚 Шаблон карточек Zettelkasten</h2>
   <p><strong>Инструкция по использованию:</strong></p>
   <ul>
-    <li>Заполните карточки информацией перед печатью</li>
+    <li><strong>Выбор типов карточек:</strong> Используйте чекбоксы в панели управления для выбора, какие типы карточек печатать</li>
+    <li><strong>Печать только шаблона:</strong> Нажмите "Очистить все поля" перед печатью для получения чистого шаблона</li>
+    <li><strong>Добавить новый тип:</strong> Нажмите "+ Добавить тип" чтобы создать новый тип карточек с собственным цветом</li>
     <li><strong>Печать:</strong> Нажмите кнопку "Печать" или используйте Ctrl+P (Cmd+P на Mac)</li>
     <li><strong>Сохранить HTML:</strong> Скачивает текущий шаблон как HTML файл</li>
     <li>После печати разрежьте страницы по пунктирным линиям между карточками</li>
@@ -312,16 +463,59 @@ body {
       ℹ️ Инструкции
     </button>
     
+    <button onclick="clearAllFields()" class="control-btn" style="background: #FF9800;">
+      🧹 Очистить все поля
+    </button>
+    
     <button onclick="window.print()" class="control-btn" style="background: #795548;">
       🖨️ Печать
     </button>
   </div>
   
+  <!-- Выбор типов карточек для печати -->
+  <div class="card-type-selector">
+    <h4>Типы карточек для печати:</h4>
+    <div id="card-type-checkboxes"></div>
+    <button onclick="showAddCardTypeModal()" style="
+      width: 100%;
+      padding: 6px;
+      margin-top: 10px;
+      background: #607D8B;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    ">+ Добавить тип</button>
+  </div>
+  
   <div id="status-message"></div>
 </div>
 
+<!-- Модальное окно для добавления типа карточек -->
+<div id="addCardTypeModal" class="modal no-print">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Добавить новый тип карточек</h3>
+      <button class="close-modal-btn" onclick="closeAddCardTypeModal()">×</button>
+    </div>
+    <div class="modal-form-group">
+      <label for="newCardTypeName">Название типа:</label>
+      <input type="text" id="newCardTypeName" placeholder="Например: Наука" />
+    </div>
+    <div class="modal-form-group">
+      <label for="newCardTypeColor">Цвет (HEX):</label>
+      <input type="color" id="newCardTypeColor" value="#e3f2fd" />
+    </div>
+    <div class="modal-buttons">
+      <button class="modal-btn modal-btn-secondary" onclick="closeAddCardTypeModal()">Отмена</button>
+      <button class="modal-btn modal-btn-primary" onclick="addNewCardType()">Добавить</button>
+    </div>
+  </div>
+</div>
+
 <!-- Страница 1: Технические карточки -->
-<div class="page">
+<div class="page" data-card-types="tech">
   <div class="grid">
     <!-- Карточка 1 -->
     <div class="card category-tech">
@@ -617,7 +811,7 @@ body {
 </div>
 
 <!-- Страница 2: Бизнес/Gambling карточки -->
-<div class="page">
+<div class="page" data-card-types="biz">
   <div class="grid">
     <!-- 8 карточек для Бизнес/Gambling -->
     <div class="card category-biz">
@@ -911,7 +1105,7 @@ body {
 </div>
 
 <!-- Страница 3: Искусство и Литература -->
-<div class="page">
+<div class="page" data-card-types="art,lit">
   <div class="grid">
     <!-- 4 карточки для Искусства -->
     <div class="card category-art">
@@ -1206,7 +1400,7 @@ body {
 </div>
 
 <!-- Страница 4: Личное развитие и универсальные -->
-<div class="page">
+<div class="page" data-card-types="personal,universal">
   <div class="grid">
     <!-- 8 универсальных карточек -->
     <div class="card category-personal">
@@ -1501,10 +1695,22 @@ body {
 
 <!-- JavaScript -->
 <script>
+// Глобальные переменные для типов карточек
+const cardTypes = {
+  'tech': { name: 'Технические', color: '#e3f2fd', enabled: true },
+  'biz': { name: 'Бизнес/Gambling', color: '#fff3e0', enabled: true },
+  'art': { name: 'Искусство', color: '#f3e5f5', enabled: true },
+  'lit': { name: 'Литература', color: '#e8f5e9', enabled: true },
+  'personal': { name: 'Личное развитие', color: '#fce4ec', enabled: true },
+  'universal': { name: 'Универсальные', color: '#ffffff', enabled: true }
+};
+
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
   setupPrintHandlers();
   checkPrintMode();
+  initializeCardTypeSelector();
+  updateCardTypeVisibility();
 });
 
 /**
@@ -1581,6 +1787,8 @@ function setupPrintHandlers() {
     noPrintElements.forEach(el => {
       el.style.display = 'none';
     });
+    
+    // Скрываем скрытые страницы (они уже скрыты через класс hidden)
   });
   
   window.addEventListener('afterprint', function() {
@@ -1612,9 +1820,211 @@ function checkPrintMode() {
   }
 }
 
+/**
+ * Инициализирует селектор типов карточек
+ */
+function initializeCardTypeSelector() {
+  const container = document.getElementById('card-type-checkboxes');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  Object.keys(cardTypes).forEach(typeKey => {
+    const type = cardTypes[typeKey];
+    const checkbox = document.createElement('div');
+    checkbox.className = 'card-type-checkbox';
+    
+    const checkboxId = `card-type-${typeKey}`;
+    checkbox.innerHTML = `
+      <input type="checkbox" id="${checkboxId}" checked onchange="updateCardTypeVisibility()" />
+      <label for="${checkboxId}">
+        <span class="color-indicator" style="background: ${type.color};"></span>
+        <span>${type.name}</span>
+      </label>
+    `;
+    
+    container.appendChild(checkbox);
+  });
+  
+  // Загружаем сохраненные настройки
+  loadCardTypeSettings();
+}
+
+/**
+ * Обновляет видимость страниц в зависимости от выбранных типов
+ */
+function updateCardTypeVisibility() {
+  const pages = document.querySelectorAll('.page[data-card-types]');
+  const enabledTypes = new Set();
+  
+  // Собираем включенные типы
+  Object.keys(cardTypes).forEach(typeKey => {
+    const checkbox = document.getElementById(`card-type-${typeKey}`);
+    if (checkbox && checkbox.checked) {
+      enabledTypes.add(typeKey);
+    }
+  });
+  
+  // Показываем/скрываем страницы
+  pages.forEach(page => {
+    const pageTypes = page.getAttribute('data-card-types').split(',').map(t => t.trim());
+    const shouldShow = pageTypes.some(type => enabledTypes.has(type));
+    
+    if (shouldShow) {
+      page.classList.remove('hidden');
+    } else {
+      page.classList.add('hidden');
+    }
+  });
+  
+  // Сохраняем настройки
+  saveCardTypeSettings();
+}
+
+/**
+ * Очищает все поля ввода
+ */
+function clearAllFields() {
+  if (!confirm('Очистить все заполненные поля? Это действие нельзя отменить.')) {
+    return;
+  }
+  
+  const inputs = document.querySelectorAll('input[type="text"]');
+  inputs.forEach(input => {
+    input.value = '';
+  });
+  
+  showStatus('✅ Все поля очищены', 'success');
+}
+
+/**
+ * Показывает модальное окно для добавления нового типа карточек
+ */
+function showAddCardTypeModal() {
+  const modal = document.getElementById('addCardTypeModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    document.getElementById('newCardTypeName').value = '';
+    document.getElementById('newCardTypeColor').value = '#e3f2fd';
+  }
+}
+
+/**
+ * Закрывает модальное окно
+ */
+function closeAddCardTypeModal() {
+  const modal = document.getElementById('addCardTypeModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+/**
+ * Добавляет новый тип карточек
+ */
+function addNewCardType() {
+  const nameInput = document.getElementById('newCardTypeName');
+  const colorInput = document.getElementById('newCardTypeColor');
+  
+  const name = nameInput.value.trim();
+  const color = colorInput.value;
+  
+  if (!name) {
+    alert('Пожалуйста, введите название типа карточек');
+    return;
+  }
+  
+  // Создаем уникальный ключ для нового типа
+  const typeKey = name.toLowerCase().replace(/[^a-zа-я0-9]/g, '-');
+  
+  if (cardTypes[typeKey]) {
+    alert('Тип с таким названием уже существует');
+    return;
+  }
+  
+  // Добавляем новый тип
+  cardTypes[typeKey] = {
+    name: name,
+    color: color,
+    enabled: true
+  };
+  
+  // Обновляем селектор
+  initializeCardTypeSelector();
+  updateCardTypeVisibility();
+  
+  // Закрываем модальное окно
+  closeAddCardTypeModal();
+  
+  // Добавляем CSS для нового типа
+  addCardTypeCSS(typeKey, color);
+  
+  showStatus(`✅ Тип "${name}" добавлен`, 'success');
+}
+
+/**
+ * Добавляет CSS для нового типа карточек
+ */
+function addCardTypeCSS(typeKey, color) {
+  const style = document.createElement('style');
+  style.textContent = `
+    .category-${typeKey} {
+      background: linear-gradient(to right, ${color} 0%, ${color} 3mm, white 3mm);
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+/**
+ * Сохраняет настройки типов карточек в localStorage
+ */
+function saveCardTypeSettings() {
+  const settings = {};
+  Object.keys(cardTypes).forEach(typeKey => {
+    const checkbox = document.getElementById(`card-type-${typeKey}`);
+    if (checkbox) {
+      settings[typeKey] = checkbox.checked;
+    }
+  });
+  localStorage.setItem('zettelkasten-card-types', JSON.stringify(settings));
+}
+
+/**
+ * Загружает настройки типов карточек из localStorage
+ */
+function loadCardTypeSettings() {
+  try {
+    const saved = localStorage.getItem('zettelkasten-card-types');
+    if (saved) {
+      const settings = JSON.parse(saved);
+      Object.keys(settings).forEach(typeKey => {
+        const checkbox = document.getElementById(`card-type-${typeKey}`);
+        if (checkbox) {
+          checkbox.checked = settings[typeKey];
+        }
+      });
+    }
+  } catch (e) {
+    console.error('Error loading card type settings:', e);
+  }
+}
+
+// Закрытие модального окна по клику вне его
+document.addEventListener('click', function(e) {
+  const modal = document.getElementById('addCardTypeModal');
+  if (modal && e.target === modal) {
+    closeAddCardTypeModal();
+  }
+});
+
 // Делаем функции доступными глобально
 window.saveAsHTML = saveAsHTML;
 window.toggleInstructions = toggleInstructions;
+window.clearAllFields = clearAllFields;
+window.updateCardTypeVisibility = updateCardTypeVisibility;
+window.showAddCardTypeModal = showAddCardTypeModal;
+window.closeAddCardTypeModal = closeAddCardTypeModal;
+window.addNewCardType = addNewCardType;
 </script>
 
 </body>
